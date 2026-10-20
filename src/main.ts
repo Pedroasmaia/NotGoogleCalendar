@@ -26,11 +26,14 @@ class TasksCalendarView extends ItemView {
       plugins: [timeGridPlugin, interactionPlugin], initialView: "timeGridWeek",
       firstDay: 1, height: "100%", nowIndicator: true, editable: true,
       selectable: true, selectMirror: true, dayMaxEvents: true,
+      slotDuration: "00:30:00", snapDuration: "00:15:00", slotLabelInterval: "01:00",
+      slotMinTime: "06:00:00", slotMaxTime: "24:00:00", allDaySlot: true,
+      eventDurationEditable: true, eventStartEditable: true,
       headerToolbar: { left: "prev,next today", center: "title", right: "timeGridWeek" },
       buttonText: { today: "Today", week: "Week" },
       events: async (_info, success) => success(await this.plugin.getCalendarEvents()),
       eventClick: (info) => this.plugin.openTask(info.event.extendedProps.task as TaskItem),
-      dateClick: (info) => this.plugin.promptNewTask(info.date),
+      select: (info) => this.plugin.promptNewTask(info.start, info.end),
       eventDrop: async (info) => { if (!(await this.plugin.moveSession(info.event.extendedProps.task as TaskItem, info.event.extendedProps.session as Session, info.event.start!, info.event.end!))) info.revert(); },
       eventResize: async (info) => { if (!(await this.plugin.moveSession(info.event.extendedProps.task as TaskItem, info.event.extendedProps.session as Session, info.event.start!, info.event.end!))) info.revert(); },
       eventContent: (arg) => ({ html: `<div class="tc-event-title">${this.plugin.escape(arg.event.title)}</div>` })
@@ -111,14 +114,16 @@ export default class TasksCalendarPlugin extends Plugin {
     });
   }
 
-  promptNewTask(date: Date): void {
+  promptNewTask(date: Date, selectedEnd?: Date): void {
     new NewTaskModal(this.app, async (title) => {
       const cleanTitle = title.trim();
       if (!cleanTitle) return;
       const path = this.dailyNotePath(date);
       const start = new Date(date);
       start.setSeconds(0, 0);
-      const end = new Date(start.getTime() + 60 * 60000);
+      const end = selectedEnd && selectedEnd > start
+        ? new Date(selectedEnd)
+        : new Date(start.getTime() + 60 * 60000);
       const due = `${this.dateString(start)} ${this.timeString(start)}`;
       const line = `- [ ] ${cleanTitle} 📅 ${due}`;
       const sessionLine = `  - 🗓️ ${this.dateString(start)} ⏰${this.timeString(start)} - ${this.timeString(end)}`;
@@ -179,6 +184,7 @@ export default class TasksCalendarPlugin extends Plugin {
   }
 
   async moveSession(task: TaskItem, session: Session, start: Date, end: Date): Promise<boolean> {
+    if (!start || !end || end <= start) return false;
     const content = await this.app.vault.read(task.file);
     const lines = content.split("\n");
     const current = lines[session.line]?.match(SESSION_RE);
