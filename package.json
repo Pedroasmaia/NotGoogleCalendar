@@ -1,0 +1,21 @@
+{
+  "name": "obsidian-tasks-calendar",
+  "version": "0.1.2",
+  "private": true,
+  "description": "Weekly calendar view for Obsidian Tasks",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --external:obsidian --format=cjs --target=es2020 --outfile=main.js",
+    "dev": "esbuild src/main.ts --bundle --external:obsidian --format=cjs --target=es2020 --outfile=main.js --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "^1.7.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15"
+  }
+}
