@@ -99,11 +99,11 @@ export default class TasksCalendarPlugin extends Plugin {
     return tasks.flatMap((task) => {
       const events: any[] = [];
       const total = task.hours ? ` · ${this.formatHours(task.hours)} logged` : "";
-      if (task.dueTime) {
+      if (task.sessions.length === 0 && task.dueTime) {
         const start = `${task.due}T${this.normalizeTime(task.dueTime)}:00`;
         const end = this.localDateTime(new Date(new Date(start).getTime() + 30 * 60000));
         events.push({ id: `due-${task.file.path}-${task.line}`, title: `Due: ${task.text}${total}`, start, end, editable: false, classNames: ["tc-due", task.status === "DONE" ? "tc-done" : ""], extendedProps: { task } });
-      } else {
+      } else if (task.sessions.length === 0) {
         events.push({ id: `due-${task.file.path}-${task.line}`, title: `Due: ${task.text}${total}`, start: task.due, allDay: true, editable: false, classNames: ["tc-due", task.status === "DONE" ? "tc-done" : ""], extendedProps: { task } });
       }
       task.sessions.forEach((session, index) => {
@@ -136,6 +136,7 @@ export default class TasksCalendarPlugin extends Plugin {
         const template = await this.readDailyNoteTemplate(path, date);
         const content = template ? `${template}${template.endsWith("\n") ? "" : "\n"}${line}\n${sessionLine}\n` : `${line}\n${sessionLine}\n`;
         await this.app.vault.create(path, content);
+        await this.processTemplaterTemplate(path);
       }
     }).open();
   }
@@ -174,6 +175,18 @@ export default class TasksCalendarPlugin extends Plugin {
       const value = variable.toLowerCase() === "date" ? date : new Date();
       return moment(value).format(format || (variable.toLowerCase() === "date" ? dateFormat : timeFormat));
     });
+  }
+
+  private async processTemplaterTemplate(path: string): Promise<void> {
+    const internalPlugins = (this.app as any).internalPlugins;
+    const templater = internalPlugins?.getEnabledPluginById?.("templater-obsidian")
+      ?? internalPlugins?.plugins?.["templater-obsidian"]?.instance;
+    if (!templater?.templater?.overwrite_file_commands) {
+      new Notice("Ative o Templater para processar os comandos do template da nota diária.");
+      return;
+    }
+    const file = this.app.vault.getAbstractFileByPath(path);
+    if (file instanceof TFile) await templater.templater.overwrite_file_commands(file);
   }
 
   private async ensureFolder(folder: string): Promise<void> {
