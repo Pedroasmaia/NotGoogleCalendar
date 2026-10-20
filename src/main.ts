@@ -116,16 +116,20 @@ export default class TasksCalendarPlugin extends Plugin {
       const cleanTitle = title.trim();
       if (!cleanTitle) return;
       const path = this.dailyNotePath(date);
-      const due = `${this.dateString(date)} ${this.timeString(date)}`;
+      const start = new Date(date);
+      start.setSeconds(0, 0);
+      const end = new Date(start.getTime() + 60 * 60000);
+      const due = `${this.dateString(start)} ${this.timeString(start)}`;
       const line = `- [ ] ${cleanTitle} 📅 ${due}`;
+      const sessionLine = `  - 🗓️ ${this.dateString(start)} ⏰${this.timeString(start)} - ${this.timeString(end)}`;
       const file = this.app.vault.getAbstractFileByPath(path);
       if (file instanceof TFile) {
         const content = await this.app.vault.read(file);
-        await this.app.vault.modify(file, `${content}${content.endsWith("\n") || !content ? "" : "\n"}${line}\n`);
+        await this.app.vault.modify(file, `${content}${content.endsWith("\n") || !content ? "" : "\n"}${line}\n${sessionLine}\n`);
       } else {
         await this.ensureFolder(path.substring(0, path.lastIndexOf("/")));
         const template = await this.readDailyNoteTemplate(path, date);
-        const content = template ? `${template}${template.endsWith("\n") ? "" : "\n"}${line}\n` : `${line}\n`;
+        const content = template ? `${template}${template.endsWith("\n") ? "" : "\n"}${line}\n${sessionLine}\n` : `${line}\n${sessionLine}\n`;
         await this.app.vault.create(path, content);
       }
     }).open();

@@ -1,0 +1,9 @@
+{
+  "id": "tasks-calendar",
+  "name": "Tasks Calendar",
+  "version": "0.1.1",
+  "minAppVersion": "1.5.0",
+  "description": "Weekly calendar for Tasks plugin items and tracked work sessions.",
+  "author": "Local",
+  "isDesktopOnly": false
+}

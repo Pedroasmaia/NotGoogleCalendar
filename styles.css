@@ -1,0 +1,14 @@
+.tasks-calendar-host { height: 100%; padding: 12px; }
+.tasks-calendar-host .fc { height: 100%; font-family: var(--font-interface); color: var(--text-normal); }
+.tasks-calendar-host .fc .fc-toolbar-title { font-size: 1.15em; font-weight: 600; }
+.tasks-calendar-host .fc .fc-button { background: var(--interactive-normal); border: 1px solid var(--background-modifier-border); color: var(--text-normal); box-shadow: none; text-transform: none; }
+.tasks-calendar-host .fc .fc-button:hover, .tasks-calendar-host .fc .fc-button:focus { background: var(--interactive-hover); color: var(--text-normal); }
+.tasks-calendar-host .fc .fc-button-primary:not(:disabled).fc-button-active { background: var(--interactive-accent); border-color: var(--interactive-accent); color: var(--text-on-accent); }
+.tasks-calendar-host .fc .fc-timegrid-slot, .tasks-calendar-host .fc td, .tasks-calendar-host .fc th { border-color: var(--background-modifier-border); }
+.tasks-calendar-host .fc .fc-scrollgrid { border-color: var(--background-modifier-border); }
+.tasks-calendar-host .fc .fc-col-header-cell-cushion, .tasks-calendar-host .fc .fc-timegrid-axis-cushion { color: var(--text-muted); text-decoration: none; }
+.tasks-calendar-host .fc .fc-event { border: none; border-radius: 5px; padding: 2px 4px; cursor: pointer; }
+.tasks-calendar-host .fc .tc-session { background: var(--interactive-accent); color: var(--text-on-accent); }
+.tasks-calendar-host .fc .tc-due { background: var(--background-modifier-hover); border-left: 3px solid var(--color-orange); color: var(--text-normal); }
+.tasks-calendar-host .fc .tc-done { opacity: .66; }
+.tasks-calendar-host .tc-event-title { overflow: hidden; white-space: normal; }
