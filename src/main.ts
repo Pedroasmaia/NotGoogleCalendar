@@ -30,14 +30,15 @@ class TasksCalendarView extends ItemView {
       plugins: [timeGridPlugin, interactionPlugin], initialView: "timeGridWeek",
       firstDay: 1, height: "100%", nowIndicator: true, editable: true,
       selectable: true, selectMirror: true, dayMaxEvents: true,
+      dayHeaderFormat: { weekday: "short", day: "numeric" },
       slotDuration: "00:30:00", snapDuration: "00:15:00", slotLabelInterval: "01:00",
       slotMinTime: "06:00:00", slotMaxTime: "24:00:00", allDaySlot: true,
       eventDurationEditable: true, eventStartEditable: true,
-      headerToolbar: { left: "prev,next today", center: "title", right: "timeGridWeek,timeGridThreeDay,timeGridDay" },
+      headerToolbar: { left: "today prev,next title", center: "", right: "timeGridWeek,timeGridThreeDay,timeGridDay" },
       views: {
         timeGridThreeDay: { type: "timeGrid", duration: { days: 3 }, buttonText: "3 days" }
       },
-      buttonText: { today: "Hoje", week: "Semana", day: "Dia" },
+      buttonText: { today: "Hoje", week: "Semana", day: "Dia", timeGridThreeDay: "3 dias" },
       events: async (_info, success) => success(await this.plugin.getCalendarEvents()),
       eventClick: (info) => this.plugin.openTask(info.event.extendedProps.task as TaskItem),
       select: (info) => this.plugin.promptNewTask(info.start, info.end),
