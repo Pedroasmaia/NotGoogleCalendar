@@ -16,6 +16,8 @@ interface TaskItem {
 
 class TasksCalendarView extends ItemView {
   calendar?: Calendar;
+  private resizeObserver?: ResizeObserver;
+  private resizeFrame = 0;
   constructor(leaf: WorkspaceLeaf, private plugin: TasksCalendarPlugin) { super(leaf); }
   getViewType(): string { return VIEW_TYPE; }
   getDisplayText(): string { return "Tasks Calendar"; }
@@ -23,6 +25,7 @@ class TasksCalendarView extends ItemView {
   async onOpen(): Promise<void> {
     this.contentEl.empty();
     this.contentEl.addClass("tasks-calendar-host");
+    this.contentEl.addClass("tc-calendar-desktop");
     this.calendar = new Calendar(this.contentEl, {
       plugins: [timeGridPlugin, interactionPlugin], initialView: "timeGridWeek",
       firstDay: 1, height: "100%", nowIndicator: true, editable: true,
@@ -30,8 +33,11 @@ class TasksCalendarView extends ItemView {
       slotDuration: "00:30:00", snapDuration: "00:15:00", slotLabelInterval: "01:00",
       slotMinTime: "06:00:00", slotMaxTime: "24:00:00", allDaySlot: true,
       eventDurationEditable: true, eventStartEditable: true,
-      headerToolbar: { left: "prev,next today", center: "title", right: "timeGridWeek" },
-      buttonText: { today: "Today", week: "Week" },
+      headerToolbar: { left: "prev,next today", center: "title", right: "timeGridWeek,timeGridThreeDay,timeGridDay" },
+      views: {
+        timeGridThreeDay: { type: "timeGrid", duration: { days: 3 }, buttonText: "3 days" }
+      },
+      buttonText: { today: "Hoje", week: "Semana", day: "Dia" },
       events: async (_info, success) => success(await this.plugin.getCalendarEvents()),
       eventClick: (info) => this.plugin.openTask(info.event.extendedProps.task as TaskItem),
       select: (info) => this.plugin.promptNewTask(info.start, info.end),
@@ -47,11 +53,26 @@ class TasksCalendarView extends ItemView {
       eventContent: (arg) => ({ html: `<div class="tc-event-title">${this.plugin.escape(arg.event.title)}</div>` })
     });
     this.calendar.render();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? this.contentEl.clientWidth;
+      window.cancelAnimationFrame(this.resizeFrame);
+      this.resizeFrame = window.requestAnimationFrame(() => {
+        const viewName = width < 560 ? "timeGridDay" : width < 900 ? "timeGridThreeDay" : "timeGridWeek";
+        if (this.calendar?.view.type !== viewName) this.calendar?.changeView(viewName);
+        this.contentEl.toggleClass("tc-calendar-mobile", width < 560);
+        this.contentEl.toggleClass("tc-calendar-compact", width >= 560 && width < 900);
+      });
+    });
+    this.resizeObserver.observe(this.contentEl);
     this.registerEvent(this.app.vault.on("modify", () => this.calendar?.refetchEvents()));
     this.registerEvent(this.app.vault.on("create", () => this.calendar?.refetchEvents()));
     this.registerEvent(this.app.vault.on("delete", () => this.calendar?.refetchEvents()));
   }
-  async onClose(): Promise<void> { this.calendar?.destroy(); }
+  async onClose(): Promise<void> {
+    this.resizeObserver?.disconnect();
+    window.cancelAnimationFrame(this.resizeFrame);
+    this.calendar?.destroy();
+  }
 }
 
 export default class TasksCalendarPlugin extends Plugin {
