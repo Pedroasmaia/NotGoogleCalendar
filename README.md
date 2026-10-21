@@ -27,7 +27,7 @@ Cada tarefa deve ter vencimento no formato `📅 YYYY-MM-DD`. Uma data sem hora 
 
 ```markdown
 - [ ] Preparar relatório 📅 2026-10-22
-  - 🗓️ 2026-10-20 ⏰09:00 - 11:00
+  - 📅 2026-10-20 ⏰09:00 - 11:00
 ```
 
 É possível registrar mais de uma sessão na mesma tarefa e em datas diferentes. A soma de todas as sessões é exibida no título da tarefa. Para associar sessões a uma tarefa existente, abra a nota e use o comando **Add work session to task under cursor**.

@@ -4,7 +4,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import timeGridPlugin from "@fullcalendar/timegrid";
 
 const VIEW_TYPE = "tasks-calendar-view";
-const SESSION_RE = /^\s*- 🗓️\s+(\d{4}-\d{2}-\d{2})(?:\s+⏰\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2}))?\s*$/;
+const SESSION_RE = /^\s*- 📅\s+(\d{4}-\d{2}-\d{2})(?:\s+⏰\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2}))?\s*$/;
 
 interface TaskStatus { symbol: string; name: string; type: string }
 interface Session { line?: number; date: string; start?: string; end?: string }
@@ -34,7 +34,14 @@ class TasksCalendarView extends ItemView {
       events: async (_info, success) => success(await this.plugin.getCalendarEvents()),
       eventClick: (info) => this.plugin.openTask(info.event.extendedProps.task as TaskItem),
       select: (info) => this.plugin.promptNewTask(info.start, info.end),
-      eventDrop: async (info) => { if (!(await this.plugin.moveSession(info.event.extendedProps.task as TaskItem, info.event.extendedProps.session as Session, info.event.start!, info.event.end!))) info.revert(); },
+      eventDrop: async (info) => {
+        const task = info.event.extendedProps.task as TaskItem;
+        const session = info.event.extendedProps.session as Session | undefined;
+        const moved = session
+          ? await this.plugin.moveSession(task, session, info.event.start!, info.event.end!)
+          : await this.plugin.moveDueDate(task, info.event.start!);
+        if (!moved) info.revert();
+      },
       eventResize: async (info) => { if (!(await this.plugin.moveSession(info.event.extendedProps.task as TaskItem, info.event.extendedProps.session as Session, info.event.start!, info.event.end!))) info.revert(); },
       eventContent: (arg) => ({ html: `<div class="tc-event-title">${this.plugin.escape(arg.event.title)}</div>` })
     });
@@ -102,9 +109,9 @@ export default class TasksCalendarPlugin extends Plugin {
       if (task.sessions.length === 0 && task.dueTime) {
         const start = `${task.due}T${this.normalizeTime(task.dueTime)}:00`;
         const end = this.localDateTime(new Date(new Date(start).getTime() + 30 * 60000));
-        events.push({ id: `due-${task.file.path}-${task.line}`, title: `Due: ${task.text}${total}`, start, end, editable: false, classNames: ["tc-due", task.status === "DONE" ? "tc-done" : ""], extendedProps: { task } });
+        events.push({ id: `due-${task.file.path}-${task.line}`, title: `Due: ${task.text}${total}`, start, end, classNames: ["tc-due", task.status === "DONE" ? "tc-done" : ""], extendedProps: { task } });
       } else if (task.sessions.length === 0) {
-        events.push({ id: `due-${task.file.path}-${task.line}`, title: `Due: ${task.text}${total}`, start: task.due, allDay: true, editable: false, classNames: ["tc-due", task.status === "DONE" ? "tc-done" : ""], extendedProps: { task } });
+        events.push({ id: `due-${task.file.path}-${task.line}`, title: `Due: ${task.text}${total}`, start: task.due, allDay: true, classNames: ["tc-due", task.status === "DONE" ? "tc-done" : ""], extendedProps: { task } });
       }
       task.sessions.forEach((session, index) => {
         if (!session.start || !session.end) return;
@@ -126,7 +133,7 @@ export default class TasksCalendarPlugin extends Plugin {
         : new Date(start.getTime() + 60 * 60000);
       const due = `${this.dateString(start)} ${this.timeString(start)}`;
       const line = `- [ ] ${cleanTitle} 📅 ${due}`;
-      const sessionLine = `  - 🗓️ ${this.dateString(start)} ⏰${this.timeString(start)} - ${this.timeString(end)}`;
+      const sessionLine = `  - 📅 ${this.dateString(start)} ⏰${this.timeString(start)} - ${this.timeString(end)}`;
       const file = this.app.vault.getAbstractFileByPath(path);
       if (file instanceof TFile) {
         const content = await this.app.vault.read(file);
@@ -202,7 +209,28 @@ export default class TasksCalendarPlugin extends Plugin {
     const lines = content.split("\n");
     const current = lines[session.line]?.match(SESSION_RE);
     if (!current) { new Notice("Session line changed; reload the calendar and try again."); return false; }
-    lines[session.line] = `  - 🗓️ ${this.dateString(start)} ⏰${this.timeString(start)} - ${this.timeString(end)}`;
+    lines[session.line] = `  - 📅 ${this.dateString(start)} ⏰${this.timeString(start)} - ${this.timeString(end)}`;
+    await this.app.vault.modify(task.file, lines.join("\n"));
+    return true;
+  }
+
+  async moveDueDate(task: TaskItem, start: Date): Promise<boolean> {
+    if (!start) return false;
+    const content = await this.app.vault.read(task.file);
+    const lines = content.split("\n");
+    const dueRe = /(\u{1F4C5}\s+)(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}))?/u;
+    const line = lines[task.line];
+    if (!line || !dueRe.test(line)) {
+      new Notice("Due date line changed; reload the calendar and try again.");
+      return false;
+    }
+    const updatedLine = line.replace(dueRe, (_match, prefix: string, _date: string, time?: string) =>
+      `${prefix}${this.dateString(start)}${time ? ` ${time}` : ""}`);
+    if (updatedLine === line) {
+      new Notice("Não encontrei a data 📅 na linha da tarefa.");
+      return false;
+    }
+    lines[task.line] = updatedLine;
     await this.app.vault.modify(task.file, lines.join("\n"));
     return true;
   }
@@ -241,7 +269,7 @@ export default class TasksCalendarPlugin extends Plugin {
       if (/^\s*- \[/.test(lines[insert])) break;
       insert++;
     }
-    lines.splice(insert, 0, `  - 🗓️ ${session.date} ⏰${session.start} - ${session.end}`);
+    lines.splice(insert, 0, `  - 📅 ${session.date} ⏰${session.start} - ${session.end}`);
     await this.app.vault.modify(task.file, lines.join("\n"));
   }
 
