@@ -4,7 +4,8 @@ import interactionPlugin from "@fullcalendar/interaction";
 import timeGridPlugin from "@fullcalendar/timegrid";
 
 const VIEW_TYPE = "tasks-calendar-view";
-const SESSION_RE = /^\s*- 📅\s+(\d{4}-\d{2}-\d{2})(?:\s+⏰\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2}))?\s*$/;
+const DATE_MARKER = "(?:\\u{1F4C5}|\\u00F0\\u0178\\u201C\\u2026)";
+const SESSION_RE = new RegExp(`^\\s*- ${DATE_MARKER}\\s+(\\d{4}-\\d{2}-\\d{2})(?:\\s+⏰\\s*(\\d{1,2}:\\d{2})\\s*-\\s*(\\d{1,2}:\\d{2}))?\\s*$`, "u");
 
 interface TaskStatus { symbol: string; name: string; type: string }
 interface Session { line?: number; date: string; start?: string; end?: string }
@@ -91,7 +92,7 @@ export default class TasksCalendarPlugin extends Plugin {
         const marker = match[2];
         const status = this.statusType(marker);
         if (status === "CANCELLED") continue;
-        const due = match[3].match(/📅\s+(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}))?/);
+        const due = match[3].match(new RegExp(`${DATE_MARKER}\\s+(\\d{4}-\\d{2}-\\d{2})(?:\\s+(\\d{1,2}:\\d{2}))?`, "u"));
         if (!due) continue;
         const sessions: Session[] = [];
         for (let j = i + 1; j < lines.length; j++) {
@@ -100,7 +101,7 @@ export default class TasksCalendarPlugin extends Plugin {
           if (sm) sessions.push({ line: j, date: sm[1], start: sm[2], end: sm[3] });
         }
         const hours = sessions.reduce((sum, s) => sum + this.sessionHours(s), 0);
-        tasks.push({ file, line: i, text: match[3].replace(/\s*📅\s+\d{4}-\d{2}-\d{2}(?:\s+\d{1,2}:\d{2})?/, "").trim(), due: due[1], dueTime: due[2], status, sessions, hours, marker });
+        tasks.push({ file, line: i, text: match[3].replace(new RegExp(`\\s*${DATE_MARKER}\\s+\\d{4}-\\d{2}-\\d{2}(?:\\s+\\d{1,2}:\\d{2})?`, "u"), "").trim(), due: due[1], dueTime: due[2], status, sessions, hours, marker });
       }
     }
     return tasks.flatMap((task) => {
@@ -218,7 +219,7 @@ export default class TasksCalendarPlugin extends Plugin {
     if (!start) return false;
     const content = await this.app.vault.read(task.file);
     const lines = content.split("\n");
-    const dueRe = /(\u{1F4C5}\s+)(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}))?/u;
+    const dueRe = new RegExp(`(${DATE_MARKER}\\s+)(\\d{4}-\\d{2}-\\d{2})(?:\\s+(\\d{1,2}:\\d{2}))?`, "u");
     const line = lines[task.line];
     if (!line || !dueRe.test(line)) {
       new Notice("Due date line changed; reload the calendar and try again.");
@@ -226,10 +227,6 @@ export default class TasksCalendarPlugin extends Plugin {
     }
     const updatedLine = line.replace(dueRe, (_match, prefix: string, _date: string, time?: string) =>
       `${prefix}${this.dateString(start)}${time ? ` ${time}` : ""}`);
-    if (updatedLine === line) {
-      new Notice("Não encontrei a data 📅 na linha da tarefa.");
-      return false;
-    }
     lines[task.line] = updatedLine;
     await this.app.vault.modify(task.file, lines.join("\n"));
     return true;
