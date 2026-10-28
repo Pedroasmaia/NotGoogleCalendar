@@ -1,7 +1,7 @@
 {
-  "id": "L1ef-calendar",
-  "name": "L1ef's Calendar",
-  "version": "0.2.0",
+  "id": "l1ef-calendar",
+  "name": "L1ef Calendar",
+  "version": "1.0.0",
   "minAppVersion": "1.5.0",
   "description": "Weekly calendar for Tasks plugin items and tracked work sessions.",
   "author": "Local",

@@ -1,6 +1,6 @@
 {
-  "name": "obsidian-l1ef-calendar",
-  "version": "0.1.2",
+  "name": "l1ef-calendar",
+  "version": "1.0.0",
   "private": true,
   "description": "Weekly calendar view for Obsidian Tasks",
   "scripts": {
